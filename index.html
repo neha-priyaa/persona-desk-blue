@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Persona Desk · Blue</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='7' fill='%23040910'/%3E%3Ccircle cx='17' cy='10' r='4.5' fill='%235fd0ff'/%3E%3Cpath d='M2 20c4-4 8 4 12 0s8 4 12 0 6 2 6 2' fill='none' stroke='%235fd0ff' stroke-opacity='.7' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Same night-desk language as Worlds (glass HUDs on a full-bleed 3D stage),
+   three new waters: Deep Sea (depth = drawdown), Weather Systems (the desk
+   as storm cells), Night Reef (the season on a reef). Single dark theme. */
+:root {
+  color-scheme: dark;
+  --ink: #040910; --ink-2: #0b111c; --glass: rgba(10, 16, 28, 0.74);
+  --rule: rgba(150, 172, 205, 0.16); --fg: #e7ecf4; --muted: #8e9ab0; --faint: #5d6880;
+  --gold: #f2c46d; --gain: #3ddc97; --loss: #ff6372;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r: 14px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--ink); color: var(--fg); }
+body { font-family: var(--f-body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; letter-spacing: -0.01em; }
+.eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.gain { color: var(--gain); } .loss { color: var(--loss); }
+
+.topbar { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; justify-content: space-between;
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  border-bottom: 1px solid var(--rule); background: var(--ink); position: relative; z-index: 5; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand svg { width: 34px; height: 34px; flex: none; }
+.brand h1 { font-size: 21px; font-weight: 800; }
+.brand p { margin: 0; color: var(--muted); font-size: 13px; }
+.worlds { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--rule); border-radius: 12px; background: var(--ink-2); overflow-x: auto; max-width: 100%; }
+.worlds button { border: 0; background: transparent; border-radius: 9px; padding: 6px 12px; cursor: pointer; text-align: left; white-space: nowrap; }
+.worlds button b { display: block; font-family: var(--f-display); font-size: 14.5px; }
+.worlds button span { font-size: 11.5px; color: var(--muted); }
+.worlds button[aria-selected="true"] { background: rgba(95,208,255,.10); box-shadow: inset 0 0 0 1px rgba(95,208,255,.45); }
+.worlds button[aria-selected="true"] b { color: #5fd0ff; }
+.top-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.sim-badge { display: inline-flex; align-items: center; gap: 8px; font-family: var(--f-mono); font-size: 11.5px; color: var(--gold);
+  border: 1px solid rgba(242,196,109,.35); background: rgba(242,196,109,.07); padding: 6px 10px; border-radius: 999px; }
+.sim-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--rule); background: var(--ink-2); padding: 7px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+.btn:hover { border-color: rgba(95,208,255,.5); }
+
+.stage { position: relative; height: clamp(600px, calc(100svh - 64px), 1000px); overflow: hidden; background: var(--ink); isolation: isolate; }
+#gl { position: absolute; inset: 0; }
+#gl canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#labels { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.lbl { position: absolute; left: 0; top: 0; white-space: nowrap; text-align: center; font-size: 11.5px;
+  text-shadow: 0 1px 6px #000, 0 0 2px #000; will-change: transform; transition: opacity .25s; }
+.lbl small { display: block; font-family: var(--f-mono); font-size: 10.5px; color: var(--muted); }
+.lbl.big { font-family: var(--f-display); font-weight: 800; font-size: 14px; }
+.lbl.off { color: var(--faint); }
+.lbl .tag { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .1em; color: var(--loss); border: 1px solid rgba(255,99,114,.5); padding: 0 4px; border-radius: 4px; margin-left: 4px; }
+
+.hud { position: absolute; z-index: 2; background: var(--glass); border: 1px solid var(--rule); border-radius: var(--r); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.pms { top: 16px; left: max(16px, env(safe-area-inset-left, 0px)); width: 280px; padding: 12px; }
+.pm-row { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: center; width: 100%; border: 1px solid transparent; background: transparent;
+  border-radius: 10px; padding: 7px 8px; cursor: pointer; text-align: left; }
+.pm-row:hover { background: rgba(255,255,255,.04); }
+.pm-row[aria-pressed="true"] { border-color: color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 10%, transparent); }
+.pm-row i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+.pm-row b { font-weight: 600; font-size: 13.5px; } .pm-row small { display: block; color: var(--muted); font-family: var(--f-mono); font-size: 10.5px; }
+.pm-row .v { font-family: var(--f-mono); font-size: 12.5px; }
+.explain { top: 16px; right: max(16px, env(safe-area-inset-right, 0px)); width: 300px; padding: 12px 14px; }
+.explain h2 { font-size: 18px; margin: 2px 0 4px; }
+.explain p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.explain .key { display: grid; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--fg); }
+.explain .key span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; background: var(--k); box-shadow: 0 0 8px var(--k); }
+.feed { right: max(16px, env(safe-area-inset-right, 0px)); bottom: 108px; width: 300px; padding: 12px 14px; }
+.feed ol { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 5px; font-size: 12px; max-height: 150px; overflow: hidden; }
+.feed li { display: grid; grid-template-columns: 42px 1fr; gap: 6px; color: var(--fg); }
+.feed li .d { font-family: var(--f-mono); color: var(--faint); }
+.feed li.cut .t::before, .feed li.bench .t::before { content: "▼ "; color: var(--loss); }
+.feed li.promote .t::before { content: "▲ "; color: var(--gain); }
+.feed li.return .t::before { content: "↺ "; color: var(--gold); }
+.controls { left: 50%; transform: translateX(-50%); bottom: 16px; width: min(720px, calc(100% - 32px)); padding: 12px 14px; display: grid; grid-template-columns: auto auto 1fr auto; gap: 14px; align-items: center; }
+.play { width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--gold); color: #1a1408; cursor: pointer; display: grid; place-items: center; box-shadow: 0 0 22px rgba(242,196,109,.35); }
+.speed { display: flex; border: 1px solid var(--rule); border-radius: 9px; overflow: hidden; }
+.speed button { border: 0; background: transparent; padding: 6px 9px; font-family: var(--f-mono); font-size: 12px; cursor: pointer; color: var(--muted); }
+.speed button[aria-pressed="true"] { background: rgba(242,196,109,.14); color: var(--gold); }
+.scrub label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+input[type=range] { width: 100%; accent-color: var(--gold); }
+.dayno { text-align: right; } .dayno span { font-family: var(--f-mono); font-size: 22px; display: block; line-height: 1; } .dayno small { color: var(--muted); font-size: 11px; }
+.hint { position: absolute; right: 16px; bottom: 16px; z-index: 1; font-size: 11.5px; color: var(--faint); }
+@media (max-width: 1100px) { .feed { display: none; } }
+@media (max-width: 900px) {
+  .explain { display: none; }
+  .pms { width: auto; right: 16px; padding: 8px; }
+  .pm-list { display: flex; gap: 4px; overflow-x: auto; }
+  .pm-row { width: auto; grid-template-columns: 10px auto; white-space: nowrap; }
+  .pm-row .v, .pm-row small { display: none; }
+  .controls { grid-template-columns: auto 1fr auto; } .speed { display: none; }
+  .hint { display: none; }
+}
+footer { padding: 14px 16px 24px; font-size: 12px; color: var(--faint); border-top: 1px solid var(--rule); }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="4.5" fill="#5fd0ff"/><path d="M2 20c4-4 8 4 12 0s8 4 12 0 6 2 6 2" fill="none" stroke="#5fd0ff" stroke-opacity=".7" stroke-width="1.6"/><circle cx="9" cy="27" r="1.6" fill="#3ddc97"/><circle cx="24" cy="28" r="1.4" fill="#f2c46d"/></svg>
+    <div><h1>Persona Desk · Blue</h1><p>The season below the surface</p></div>
+  </div>
+  <div class="worlds" role="tablist" aria-label="World">
+    <button role="tab" data-w="sea" aria-selected="true"><b>Deep Sea</b><span>traders as submersibles</span></button>
+    <button role="tab" data-w="weather" aria-selected="false"><b>Weather Systems</b><span>the desk as storms</span></button>
+    <button role="tab" data-w="reef" aria-selected="false"><b>Night Reef</b><span>a season on the reef</span></button>
+  </div>
+  <div class="top-right">
+    <span class="sim-badge" title="Trader returns come from a seeded synthetic market, not live or backtested trading.">Illustrative simulation</span>
+    <button class="btn" id="reroll" type="button">↻ New market <span class="mono" id="seedlbl" style="color:var(--muted)"></span></button>
+  </div>
+</header>
+
+<section class="stage" id="stage" aria-label="3D scene">
+  <div id="gl"></div>
+  <div id="labels" aria-hidden="true"></div>
+
+  <div class="hud pms">
+    <div class="eyebrow" style="color:var(--fg);margin-bottom:6px">Choose a manager</div>
+    <div class="pm-list" id="pmList"></div>
+  </div>
+
+  <div class="hud explain" id="explain"></div>
+
+  <div class="hud feed" aria-live="polite">
+    <span class="eyebrow" style="color:var(--fg)">Risk desk feed</span>
+    <ol id="feed"></ol>
+  </div>
+
+  <div class="hud controls" role="group" aria-label="Season replay">
+    <button class="play" id="play" type="button" aria-label="Play season"></button>
+    <div class="speed" id="speed"><button type="button" data-s="1" aria-pressed="true">1×</button><button type="button" data-s="2" aria-pressed="false">2×</button><button type="button" data-s="4" aria-pressed="false">4×</button></div>
+    <div class="scrub"><label for="scrub"><span>Season replay</span><span class="mono" id="scrubinfo"></span></label><input type="range" id="scrub" min="0" max="120" step="1" value="0"></div>
+    <div class="dayno"><span id="dayno">0</span><small>trading day</small></div>
+  </div>
+  <div class="hint">Drag to orbit · scroll to zoom</div>
+</section>
+
+<footer>Illustrative simulation. Trader returns are generated by a seeded synthetic market and are not live, paper or backtested results. Manager behaviour is each manager's real rule set applied to those returns. Not investment advice.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+"use strict";
+const DATA = {"personas": [{"slug": "afternoon-decay-specialist", "name": "Afternoon Decay Specialist", "description": "Stays out during the noisy opening and lets the morning move play out. Sells premium once the session has settled, holding into the close when the market is calm. Prefers quieter, range-bound afternoons.", "traits": ["patient, waits for confirmation", "moderate risk appetite", "dislikes opening volatility"], "beliefs": ["intraday volatility usually eases as the session progresses", "the first hour carries most of the day's surprise moves"], "leanings": ["PremiumStopStraddle", "DeltaNeutralStraddle"], "avoid": ["entering positions before 11:00"], "family": "sellers", "model": "seller", "appetite": 0.8, "appetite_label": "Moderate", "activity": 1}, {"slug": "capital-preserver", "name": "Capital Preserver", "description": "Treats survival as the only goal that matters. Runs the smallest exposure that still makes a trade worthwhile, uses tight combined stops, and is happy to sit the day out when conditions look unclear. Judges a day by how little was lost, not by how much was made.", "traits": ["very risk averse", "comfortable doing nothing", "prefers one simple position over a complex book"], "beliefs": ["a skipped trade costs nothing, a blown stop costs a lot"], "leanings": ["PremiumStopStraddle"], "avoid": ["expiry-day (0DTE) premium selling", "adding units or averaging into losing positions", "running more than one strategy family at once"], "family": "sellers", "model": "seller", "appetite": 0.3, "appetite_label": "Very averse", "activity": 0.45}, {"slug": "cautious-morning-seller", "name": "Cautious Morning Seller", "description": "Sells option premium in the first part of the session, when time decay is working hardest, and aims to be flat before lunch. Prefers a small number of well-defined trades with clear stops over constant activity. Would rather miss a good afternoon than sit through a bad one.", "traits": ["patient, low turnover", "conservative risk appetite, protects downside before chasing return", "dislikes holding positions late in the day"], "beliefs": ["time decay is highest at the start of the trading day", "intraday volatility usually eases as the session progresses"], "leanings": ["PremiumStopStraddle"], "avoid": ["holding short positions after 12:30", "re-entering after a stop on the same day"], "family": "sellers", "model": "seller", "appetite": 0.5, "appetite_label": "Conservative", "activity": 1}, {"slug": "expiry-day-hunter", "name": "Expiry-Day Hunter", "description": "Lives for expiry-day premium decay and is willing to accept sharp intraday swings to capture it. Concentrates activity close to expiry and sizes up when days-to-expiry is lowest. Accepts that some days will hit stops hard.", "traits": ["aggressive, high conviction", "tolerates large intraday drawdowns", "acts quickly, dislikes waiting"], "beliefs": ["short premium works best at 0 to 2 days to expiry", "premium collapses fastest in the final session before expiry"], "leanings": ["PremiumStopStraddle", "IntervalStraddle", "RollingStraddleUnified"], "avoid": ["trading far-dated expiries"], "family": "sellers", "model": "seller", "appetite": 1.0, "appetite_label": "Aggressive", "activity": 1}, {"slug": "last-hour-closer", "name": "Last-Hour Closer", "description": "Ignores most of the session and trades only the final stretch, collecting the last burst of time decay before the close. Keeps size small and stops tight because there is little time to recover from a bad move. Its results are meant to have little to do with the morning traders' results.", "traits": ["highly selective, short holding period", "conservative to moderate risk appetite", "comfortable sitting idle most of the day"], "beliefs": ["strategies with start times far apart are less correlated than those starting close together", "the remaining premium in the last part of the session decays quickly"], "leanings": ["IntervalStraddle", "PremiumStopStraddle"], "avoid": ["entering positions before 14:00", "holding any position into the closing auction"], "family": "sellers", "model": "seller", "appetite": 0.6, "appetite_label": "Conservative–moderate", "activity": 1}, {"slug": "steady-roller", "name": "Steady Roller", "description": "Keeps a short straddle centred near the money all session and rolls it when the market drifts, rather than taking a stop and walking away. Likes staying in the market with a managed position, within a firm limit on rolls.", "traits": ["persistent, hands-on", "moderate risk appetite", "prefers adjusting over exiting"], "beliefs": ["recentring a short straddle keeps collecting decay while limiting directional drift"], "leanings": ["RollingStraddleUnified"], "avoid": ["unlimited rolling without a premium stop"], "family": "sellers", "model": "seller", "appetite": 0.8, "appetite_label": "Moderate", "activity": 1}, {"slug": "time-diversifier", "name": "Time Diversifier", "description": "Spreads entries across the whole session so that positions do not all win or lose together. Prefers several smaller entries at well-separated start times over one large entry. Cares more about a smooth equity curve than a big day.", "traits": ["methodical, schedule driven", "moderate risk appetite", "values consistency over peak returns"], "beliefs": ["strategies with start times far apart are less correlated than those starting close together"], "leanings": ["IntervalStraddle", "PremiumStopStraddle"], "avoid": ["clustering several entries within the same half hour"], "family": "sellers", "model": "seller", "appetite": 0.8, "appetite_label": "Moderate", "activity": 1}, {"slug": "wide-strangle-seller", "name": "Wide Strangle Seller", "description": "Sells strangles well away from the money, collecting less premium in exchange for room to be wrong. Uses wide stops so moderate moves do not shake it out, and lets distance do the risk management. Accepts smaller wins for a higher hit rate.", "traits": ["low-touch, sets and forgets", "moderate risk appetite", "values hit rate over premium collected"], "beliefs": ["far out-of-the-money options decay steadily while surviving moves that stop out at-the-money straddles"], "leanings": ["PremiumStopStraddle"], "avoid": ["selling at-the-money strikes", "tight stops that trigger on ordinary noise"], "family": "sellers", "model": "seller", "appetite": 0.8, "appetite_label": "Moderate", "activity": 1}, {"slug": "adaptive-hedger", "name": "Adaptive Hedger", "description": "Starts with a directional short option and adapts as the market responds, adding legs, converting into straddles, or buying protection when the move goes against the position. Comfortable running a layered book that changes shape through the day.", "traits": ["adaptive, comfortable with complexity", "moderate to aggressive risk appetite", "responds to the market rather than predicting it"], "beliefs": ["adding hedges as a move extends limits damage better than an early hard stop"], "leanings": ["EscalatingHedgeUnified", "DirectionalAccumulator"], "avoid": ["leaving a losing directional leg unhedged"], "family": "neutral", "model": "neutral", "appetite": 0.9, "appetite_label": "Moderate–aggressive", "activity": 1}, {"slug": "delta-balancer", "name": "Delta Balancer", "description": "Wants the book to have no strong opinion on direction. Sells premium with a near-zero net delta and rebalances whenever delta drifts too far. Measures success by how little the position cares where the market goes.", "traits": ["disciplined, rule based", "moderate risk appetite", "comfortable with frequent small adjustments"], "beliefs": ["a delta-neutral short premium book earns decay while keeping directional risk small"], "leanings": ["DeltaNeutralStraddle", "DeltaReentryUnified"], "avoid": ["taking a directional view"], "family": "neutral", "model": "neutral", "appetite": 0.8, "appetite_label": "Moderate", "activity": 1}, {"slug": "reentry-grinder", "name": "Reentry Grinder", "description": "Sells a delta-neutral pair and, when stopped, rebuilds and goes again rather than walking away. Treats each stop as a reset, not a verdict, and grinds out decay through repeated entries. Stops for the day once its re-entry allowance is used up.", "traits": ["persistent, resilient after losses", "moderate to aggressive risk appetite", "comfortable with high turnover"], "beliefs": ["a stop-out often comes at the peak of a move, making the next entry better priced"], "leanings": ["DeltaNeutralStraddle", "DeltaReentryUnified"], "avoid": ["unlimited re-entries without a daily cap", "increasing size on re-entry"], "family": "neutral", "model": "neutral", "appetite": 0.9, "appetite_label": "Moderate–aggressive", "activity": 1}, {"slug": "gamma-buyer", "name": "Gamma Buyer", "description": "The desk's long-volatility trader. Buys straddles when intraday implied volatility looks unusually cheap and profits when the market finally moves, which are often the days the premium sellers get hurt. Pays a little decay on quiet days as the price of owning the big moves. Needs an explicit BUY override at generation time, because the generator defaults intraday entries to selling.", "traits": ["contrarian to the rest of the desk", "moderate risk appetite with a known maximum loss per trade", "patient through slow, decaying days"], "beliefs": ["unusually low intraday implied volatility tends to revert upward", "quiet sessions are often followed by sharp intraday moves"], "leanings": ["IVMeanReversion", "PremiumStopStraddle"], "avoid": ["selling naked option premium", "buying when implied volatility is already elevated"], "family": "volatility", "model": "longvol", "appetite": 0.8, "appetite_label": "Moderate", "activity": 1}, {"slug": "volatility-contrarian", "name": "Volatility Contrarian", "description": "Watches implied volatility rather than price. Sells when intraday IV looks stretched and expects it to revert, and stays flat when IV is unremarkable. Trades only when the volatility signal is clear.", "traits": ["contrarian, signal driven", "moderate risk appetite", "selective, low trade count"], "beliefs": ["unusually high intraday implied volatility tends to revert toward its mean"], "leanings": ["IVMeanReversion"], "avoid": ["selling premium when implied volatility is already low"], "family": "volatility", "model": "ivsignal", "appetite": 0.8, "appetite_label": "Moderate", "activity": 1}, {"slug": "breakout-fader", "name": "Breakout Fader", "description": "Lets the early range form, then sells the option on the side the market has just moved away from once a breakout is confirmed. Follows the move rather than fighting it, and takes one clean trade per breakout.", "traits": ["reactive, waits for the market to show its hand", "moderate to aggressive risk appetite", "prefers single-leg trades"], "beliefs": ["after a confirmed range breakout, the far side option loses value quickly"], "leanings": ["Breakout"], "avoid": ["trading before the opening range has formed"], "family": "directional", "model": "fade", "appetite": 0.9, "appetite_label": "Moderate–aggressive", "activity": 1}, {"slug": "defined-risk-spreader", "name": "Defined-Risk Spreader", "description": "Takes a directional view but refuses open-ended risk. Expresses it through bull-call or bear-put debit spreads, so the worst case is known before entry, and adds spreads only while the view keeps working. Wants to be flat by the close. Needs an explicit override at generation time, because the generator defaults intraday entries to selling.", "traits": ["directional but disciplined", "conservative to moderate risk appetite", "insists on knowing the maximum loss up front"], "beliefs": ["a capped-loss directional position can be held through noise that would stop out a naked short"], "leanings": ["DebitSpreadExpiry"], "avoid": ["naked short options", "carrying spreads past the close", "adding spreads to a losing view"], "family": "directional", "model": "spread", "appetite": 0.6, "appetite_label": "Conservative–moderate", "activity": 1}, {"slug": "trend-presser", "name": "Trend Presser", "description": "Starts the day neutral, then leans into whichever way the market commits. Keeps adding short options on the side the market is moving away from while the trend holds, and cuts the losing leg quickly when it reverses. Believes trend days pay for the whole week.", "traits": ["trend follower, presses winners", "moderate to aggressive risk appetite", "decisive once direction is clear"], "beliefs": ["an established intraday trend is more likely to continue than reverse", "the option on the side the market moves away from decays fastest"], "leanings": ["DirectionalAccumulator"], "avoid": ["adding to the side the market is moving toward", "holding a losing directional leg past its stop"], "family": "directional", "model": "trend", "appetite": 0.9, "appetite_label": "Moderate–aggressive", "activity": 1}], "pms": [{"slug": "equal-weight-steward", "name": "Equal-Weight Steward", "description": "The control group. Every persona gets the same share of the book, every day, with no opinion on who is good. The only action it takes is benching a persona that is clearly broken. It exists so the other PMs have an honest baseline to beat.", "traits": ["Deliberately opinion-free", "Patient through ordinary drawdowns", "Intervenes only on clear failure"], "philosophy": "Equal weight for all; skill should show up without help from sizing.", "starting_capital": 80000000, "rules": {"style": "equal_weight", "review_every_days": 20, "min_weight_pct": 6.25, "max_weight_pct": 6.25, "cut_loss_pct": null, "cut_drawdown_pct": null, "cut_step_pct": null, "cut_requires_book_drawdown_pct": null, "bench_loss_pct": 4, "bench_drawdown_pct": 5, "bench_days": 20, "promote_min_history_days": null, "promote_lookback_days": null, "promote_requires_no_cut": null, "promote_step_pct": null, "vol_lookback_days": null, "rank_lookback_days": null, "rank_tiers": null, "rank_bottom_bench_if_negative": null}}, {"slug": "momentum-allocator", "name": "Momentum Allocator", "description": "Believes recent winners keep winning. Each week it moves weight toward the personas making money and away from the ones losing it, after only two weeks of evidence. A hard drawdown line benches anyone who breaks badly.", "traits": ["Rides hot hands", "Unsentimental about laggards", "Quick to scale up a streak"], "philosophy": "Capital follows recent performance.", "starting_capital": 80000000, "rules": {"style": "momentum", "review_every_days": 5, "min_weight_pct": 2, "max_weight_pct": 18, "cut_loss_pct": 2, "cut_drawdown_pct": 3, "cut_step_pct": 2, "cut_requires_book_drawdown_pct": 1, "bench_loss_pct": 3.5, "bench_drawdown_pct": 4.5, "bench_days": 10, "promote_min_history_days": 10, "promote_lookback_days": 10, "promote_requires_no_cut": false, "promote_step_pct": 3, "vol_lookback_days": null, "rank_lookback_days": null, "rank_tiers": null, "rank_bottom_bench_if_negative": null}}, {"slug": "sharpe-ranker", "name": "Sharpe Ranker", "description": "Keeps a monthly league table of personas ranked by risk-adjusted return (mean over std dev of daily return). The top of the table earns a bigger share of the book, and the bottom is benched to cash if it lost money over the month. Between reviews it only steps in on a deep drawdown.", "traits": ["Competitive, league-table mindset", "Rewards consistency over raw PnL", "Monthly cadence, little day-to-day meddling"], "philosophy": "Weight by risk-adjusted rank; losers at the bottom sit out.", "starting_capital": 80000000, "rules": {"style": "rank", "review_every_days": 21, "min_weight_pct": 5, "max_weight_pct": 10, "cut_loss_pct": null, "cut_drawdown_pct": null, "cut_step_pct": null, "cut_requires_book_drawdown_pct": null, "bench_loss_pct": 3, "bench_drawdown_pct": 4.5, "bench_days": 21, "promote_min_history_days": null, "promote_lookback_days": null, "promote_requires_no_cut": null, "promote_step_pct": null, "vol_lookback_days": null, "rank_lookback_days": 21, "rank_tiers": [{"count": 3, "weight_pct": 10}, {"count": 10, "weight_pct": 5.5}, {"count": 3, "weight_pct": 5}], "rank_bottom_bench_if_negative": true}}, {"slug": "strict-risk-officer", "name": "Strict Risk Officer", "description": "Runs the book like a multi-manager pod shop: risk is rented to traders, never given. A persona that draws down loses weight right away and is benched if it keeps bleeding. Extra weight comes only after weeks of clean, profitable history.", "traits": ["Cuts first, asks questions later", "Slow to trust, quick to withdraw", "Treats every extra percent of the book as a privilege, not a right"], "philosophy": "Protect the book first; size up only on sustained evidence.", "starting_capital": 80000000, "rules": {"style": "ladder", "review_every_days": 5, "min_weight_pct": 3, "max_weight_pct": 18, "cut_loss_pct": 1.5, "cut_drawdown_pct": 2.5, "cut_step_pct": 2, "cut_requires_book_drawdown_pct": 1, "bench_loss_pct": 3, "bench_drawdown_pct": 4, "bench_days": 10, "promote_min_history_days": 20, "promote_lookback_days": 15, "promote_requires_no_cut": true, "promote_step_pct": 2, "vol_lookback_days": null, "rank_lookback_days": null, "rank_tiers": null, "rank_bottom_bench_if_negative": null}}, {"slug": "volatility-balancer", "name": "Volatility Balancer", "description": "A risk-parity allocator. It weights each persona inversely to how much its daily return swings, so every persona adds roughly equal risk. Who made money does not matter, only how wildly they move. A single deep-drawdown bench is its only concession to PnL, a backstop against a quiet, steady bleed.", "traits": ["Risk-first, return-agnostic", "Calm, mechanical rebalancer", "Distrusts big swings regardless of direction"], "philosophy": "Equalise risk, not capital; volatility sets the weight.", "starting_capital": 80000000, "rules": {"style": "inverse_vol", "review_every_days": 5, "min_weight_pct": 2, "max_weight_pct": 15, "cut_loss_pct": null, "cut_drawdown_pct": null, "cut_step_pct": null, "cut_requires_book_drawdown_pct": null, "bench_loss_pct": 4, "bench_drawdown_pct": 5, "bench_days": 20, "promote_min_history_days": null, "promote_lookback_days": null, "promote_requires_no_cut": null, "promote_step_pct": null, "vol_lookback_days": 20, "rank_lookback_days": null, "rank_tiers": null, "rank_bottom_bench_if_negative": null}}], "persona_capital": 5000000, "today": {"date": "2026-11-09", "expiry": "2026-11-09", "underlying": "NIFTY", "strategies": [{"slug": "adaptive-hedger", "tag": "adaptive-hedger:nifty:eschedge:0930:dayopen:2l", "strategy": "escalatinghedgeunified", "start": "09:20", "end": "15:15", "risk": 16500, "lots": 2, "active": true}, {"slug": "adaptive-hedger", "tag": "adaptive-hedger:nifty:eschedge:1130:momentum:2l", "strategy": "escalatinghedgeunified", "start": "11:20", "end": "15:15", "risk": 15000, "lots": 2, "active": true}, {"slug": "adaptive-hedger", "tag": "adaptive-hedger:nifty:diracc:1000:max4:2l:tilt", "strategy": "directionalaccumulator", "start": "10:00", "end": "15:15", "risk": 13500, "lots": 2, "active": true}, {"slug": "afternoon-decay-specialist", "tag": "afternoon-decay-specialist:nifty:psstraddle:1100:csl30:2l", "strategy": "premiumstopstraddle", "start": "11:00", "end": "15:15", "risk": 14000, "lots": 2, "active": true}, {"slug": "afternoon-decay-specialist", "tag": "afternoon-decay-specialist:nifty:psstrangle:1300:d1:csl30:2l", "strategy": "premiumstopstraddle", "start": "13:00", "end": "15:15", "risk": 14000, "lots": 2, "active": true}, {"slug": "afternoon-decay-specialist", "tag": "afternoon-decay-specialist:nifty:deltaneutral:1200:2l:tilt", "strategy": "deltaneutralstraddle", "start": "12:00", "end": "15:15", "risk": 12000, "lots": 2, "active": true}, {"slug": "breakout-fader", "tag": "breakout-fader:nifty:breakout:0915-0945:2l", "strategy": "breakout", "start": "09:15", "end": "15:15", "risk": 15000, "lots": 2, "active": true}, {"slug": "breakout-fader", "tag": "breakout-fader:nifty:breakout:1030-1100:2l", "strategy": "breakout", "start": "10:30", "end": "15:15", "risk": 15000, "lots": 2, "active": true}, {"slug": "breakout-fader", "tag": "breakout-fader:nifty:breakout:1230-1300:2l", "strategy": "breakout", "start": "12:30", "end": "15:15", "risk": 15000, "lots": 2, "active": true}, {"slug": "capital-preserver", "tag": "capital-preserver:nifty:psstrangle:0930:d1:csl20:1l:sitout0dte", "strategy": "premiumstopstraddle", "start": "09:30", "end": "15:15", "risk": 6000, "lots": 1, "active": false}, {"slug": "cautious-morning-seller", "tag": "cautious-morning-seller:nifty:psstraddle:0920-1230:csl25:2l", "strategy": "premiumstopstraddle", "start": "09:20", "end": "12:30", "risk": 14000, "lots": 2, "active": true}, {"slug": "cautious-morning-seller", "tag": "cautious-morning-seller:nifty:psstrangle:0945-1230:d1:csl25:2l", "strategy": "premiumstopstraddle", "start": "09:45", "end": "12:30", "risk": 11000, "lots": 2, "active": true}, {"slug": "defined-risk-spreader", "tag": "defined-risk-spreader:nifty:bullcall:0945-1300:max3:5l", "strategy": "debitspreadexpiry", "start": "09:45", "end": "13:00", "risk": 30000, "lots": 5, "active": true}, {"slug": "delta-balancer", "tag": "delta-balancer:nifty:deltareentry:1000:bal2:2l", "strategy": "deltareentryunified", "start": "09:55", "end": "15:15", "risk": 28000, "lots": 2, "active": true}, {"slug": "delta-balancer", "tag": "delta-balancer:nifty:deltaneutral:0930:2l:tilt", "strategy": "deltaneutralstraddle", "start": "09:30", "end": "15:15", "risk": 12000, "lots": 2, "active": true}, {"slug": "expiry-day-hunter", "tag": "expiry-day-hunter:nifty:rolling:0920:atmstep:r4:2l:tilt", "strategy": "rollingstraddleunified", "start": "09:20", "end": "15:15", "risk": 15000, "lots": 2, "active": true}, {"slug": "expiry-day-hunter", "tag": "expiry-day-hunter:nifty:psstraddle:0930:csl35:3l", "strategy": "premiumstopstraddle", "start": "09:30", "end": "15:15", "risk": 20000, "lots": 3, "active": true}, {"slug": "expiry-day-hunter", "tag": "expiry-day-hunter:nifty:interval:1000:i60d45:2l", "strategy": "intervalstraddle", "start": "10:00", "end": "15:00", "risk": 15000, "lots": 2, "active": true}, {"slug": "gamma-buyer", "tag": "gamma-buyer:nifty:ivmr:long:1000:z2:3l", "strategy": "ivmeanreversion", "start": "10:00", "end": "15:00", "risk": 24000, "lots": 3, "active": true}, {"slug": "gamma-buyer", "tag": "gamma-buyer:nifty:psstraddle:buy:0920:csl35:2l", "strategy": "premiumstopstraddle", "start": "09:20", "end": "15:00", "risk": 16000, "lots": 2, "active": true}, {"slug": "last-hour-closer", "tag": "last-hour-closer:nifty:interval:1400:i20d20:2l", "strategy": "intervalstraddle", "start": "14:00", "end": "15:15", "risk": 15000, "lots": 2, "active": true}, {"slug": "last-hour-closer", "tag": "last-hour-closer:nifty:psstrangle:1415:d1:csl25:2l", "strategy": "premiumstopstraddle", "start": "14:15", "end": "15:15", "risk": 15000, "lots": 2, "active": true}, {"slug": "reentry-grinder", "tag": "reentry-grinder:nifty:deltaneutral:0930:dt15:2l:tilt", "strategy": "deltaneutralstraddle", "start": "09:30", "end": "15:15", "risk": 13500, "lots": 2, "active": true}, {"slug": "reentry-grinder", "tag": "reentry-grinder:nifty:deltaneutral:1200:dt15:2l", "strategy": "deltaneutralstraddle", "start": "12:00", "end": "15:15", "risk": 16000, "lots": 2, "active": true}, {"slug": "reentry-grinder", "tag": "reentry-grinder:nifty:deltareentry:1000:2l", "strategy": "deltareentryunified", "start": "09:55", "end": "15:15", "risk": 15500, "lots": 2, "active": true}, {"slug": "steady-roller", "tag": "steady-roller:nifty:rolling:0930:pct04:r3:3l", "strategy": "rollingstraddleunified", "start": "09:30", "end": "15:15", "risk": 28000, "lots": 3, "active": true}, {"slug": "steady-roller", "tag": "steady-roller:nifty:rolling:1130:atmstep:r3:2l:tilt", "strategy": "rollingstraddleunified", "start": "11:30", "end": "15:15", "risk": 12000, "lots": 2, "active": true}, {"slug": "time-diversifier", "tag": "time-diversifier:nifty:interval:0930:i90d60:d1:2l:tilt", "strategy": "intervalstraddle", "start": "09:30", "end": "15:00", "risk": 12000, "lots": 2, "active": true}, {"slug": "time-diversifier", "tag": "time-diversifier:nifty:psstraddle:1015:csl30:1l", "strategy": "premiumstopstraddle", "start": "10:15", "end": "15:15", "risk": 8000, "lots": 1, "active": true}, {"slug": "time-diversifier", "tag": "time-diversifier:nifty:psstrangle:1145:d1:csl30:1l", "strategy": "premiumstopstraddle", "start": "11:45", "end": "15:15", "risk": 5000, "lots": 1, "active": true}, {"slug": "time-diversifier", "tag": "time-diversifier:nifty:psstraddle:1315:csl30:1l", "strategy": "premiumstopstraddle", "start": "13:15", "end": "15:15", "risk": 8000, "lots": 1, "active": true}, {"slug": "time-diversifier", "tag": "time-diversifier:nifty:psstrangle:1445:d1:csl30:1l", "strategy": "premiumstopstraddle", "start": "14:45", "end": "15:15", "risk": 5000, "lots": 1, "active": true}, {"slug": "trend-presser", "tag": "trend-presser:nifty:diracc:0945:max6:2l", "strategy": "directionalaccumulator", "start": "09:45", "end": "15:15", "risk": 31500, "lots": 2, "active": true}, {"slug": "trend-presser", "tag": "trend-presser:nifty:diracc:1130:max6:1l:tilt", "strategy": "directionalaccumulator", "start": "11:30", "end": "15:15", "risk": 13500, "lots": 1, "active": true}, {"slug": "volatility-contrarian", "tag": "volatility-contrarian:nifty:ivmr:short:1000:z2:3l", "strategy": "ivmeanreversion", "start": "10:00", "end": "15:15", "risk": 28000, "lots": 3, "active": true}, {"slug": "volatility-contrarian", "tag": "volatility-contrarian:nifty:ivmr:short:1230:z25:2l:tilt", "strategy": "ivmeanreversion", "start": "12:30", "end": "15:15", "risk": 12000, "lots": 2, "active": true}, {"slug": "wide-strangle-seller", "tag": "wide-strangle-seller:nifty:psstrangle:0930:d4:csl60:3l", "strategy": "premiumstopstraddle", "start": "09:30", "end": "15:15", "risk": 24000, "lots": 3, "active": true}, {"slug": "wide-strangle-seller", "tag": "wide-strangle-seller:nifty:psstrangle:1030:d6:csl70:2l", "strategy": "premiumstopstraddle", "start": "10:30", "end": "15:15", "risk": 16000, "lots": 2, "active": true}]}};
+const E = DeskEngine, T = THREE;
+
+const P = DATA.personas, M = DATA.pms, NP = P.length, DAYS = 120;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const PM_COLOR = { "equal-weight-steward": "#8fb4ff", "momentum-allocator": "#ff8a5c", "sharpe-ranker": "#b892ff", "strict-risk-officer": "#2fd3c0", "volatility-balancer": "#f2c46d" };
+const FALLBACK = ["#8fb4ff", "#ff8a5c", "#b892ff", "#2fd3c0", "#f2c46d"];
+const pmColor = (k) => PM_COLOR[M[k].slug] || FALLBACK[k % FALLBACK.length];
+const FAM_C = { sellers: "#e9eef7", neutral: "#5fd0ff", volatility: "#c08bff", directional: "#ffb45c" };
+const FAM_N = { sellers: "Premium sellers", neutral: "Delta-neutral", volatility: "Volatility", directional: "Directional" };
+const pct = (x, d = 2) => (x >= 0 ? "+" : "") + x.toFixed(d) + "%";
+
+let seed = 2026, SIM, CUM;
+function simulate() {
+  SIM = E.simulate(DATA, seed, DAYS);
+  // CUM[i][d] = trader i's cumulative return after d days (d = 0..DAYS)
+  CUM = SIM.returns.map((r) => { let c = 0; const a = [0]; r.forEach((x) => { c += x; a.push(c); }); return a; });
+}
+simulate();
+let K = Math.max(0, M.findIndex((m) => m.slug === "momentum-allocator"));
+let day = 0, playing = true, speed = 1, world = "sea";
+
+/* ---------------- renderer ---------------- */
+const host = $("gl");
+const renderer = new T.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setClearColor(0x040910);
+host.appendChild(renderer.domElement);
+const camera = new T.PerspectiveCamera(48, 1, 0.1, 2000);
+const controls = new T.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.autoRotate = true; controls.autoRotateSpeed = 0.35;
+controls.addEventListener("start", () => { controls.autoRotate = false; });
+
+function glowTex() {
+  const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d");
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.18, "rgba(255,255,255,.55)"); gr.addColorStop(0.5, "rgba(255,255,255,.12)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new T.CanvasTexture(c);
+}
+const GLOW = glowTex();
+const glow = (color, size, op = 0.8) => { const s = new T.Sprite(new T.SpriteMaterial({ map: GLOW, color, transparent: true, opacity: op, blending: T.AdditiveBlending, depthWrite: false })); s.scale.setScalar(size); return s; };
+function starfield(scene, n, r) {
+  const g = new T.BufferGeometry(), a = new Float32Array(n * 3), rnd = E.mulberry32(7);
+  for (let i = 0; i < n; i++) { const u = rnd() * 2 - 1, th = rnd() * Math.PI * 2, rr = r * (0.6 + rnd() * 0.4), s = Math.sqrt(1 - u * u);
+    a[i * 3] = rr * s * Math.cos(th); a[i * 3 + 1] = rr * u; a[i * 3 + 2] = rr * s * Math.sin(th); }
+  g.setAttribute("position", new T.BufferAttribute(a, 3));
+  scene.add(new T.Points(g, new T.PointsMaterial({ color: 0x8e9ab0, size: 0.6, transparent: true, opacity: 0.55 })));
+}
+
+/* HTML labels projected from 3D anchors. ox/oy shift the label box (-50% = centred). */
+const LBL = $("labels");
+function mkLabel(cls) { const d = document.createElement("div"); d.className = "lbl " + (cls || ""); LBL.appendChild(d); return d; }
+const tmpV = new T.Vector3();
+function place(lbl, obj, dy, ox = "-50%", oy = "0") {
+  obj.getWorldPosition(tmpV); tmpV.y += dy || 0; tmpV.project(camera);
+  if (tmpV.z > 1) { lbl.style.opacity = 0; return; }
+  const w = host.clientWidth, h = host.clientHeight;
+  lbl.style.transform = `translate(${(tmpV.x * 0.5 + 0.5) * w}px, ${(-tmpV.y * 0.5 + 0.5) * h}px) translate(${ox}, ${oy})`;
+  lbl.style.opacity = "";
+}
+
+const vol7 = (i, di) => E.std(SIM.returns[i].slice(Math.max(0, di - 7), di));
+const dayRet = (i, di) => (di ? SIM.returns[i][di - 1] : 0);
+const leaders = (di) => new Set([...Array(NP).keys()].sort((a, c) => CUM[c][di] - CUM[a][di]).slice(0, 5));
+
+const W = {}; // worlds
+
+/* ================= DEEP SEA ================= */
+/* Traders are submersibles over an abyssal plain. Altitude tracks cumulative
+   return (the 0% waterline is the reference plane); benched subs dock at a red
+   surface station. Sonar rings ping the manager's cuts, benches and promotions. */
+W.sea = (() => {
+  const scene = new T.Scene(); scene.fog = new T.FogExp2(0x03101c, 0.0075);
+  scene.add(new T.AmbientLight(0x2a4a6a, 0.9));
+  const shaftL = new T.DirectionalLight(0x9fd8ff, 0.7); shaftL.position.set(0, 80, 20); scene.add(shaftL);
+  starfield(scene, 700, 320);
+
+  // abyssal floor
+  const floorGeo = new T.PlaneGeometry(360, 360, 48, 48); floorGeo.rotateX(-Math.PI / 2);
+  { const fp = floorGeo.attributes.position.array, fr = E.mulberry32(11);
+    for (let v = 0; v < fp.length; v += 3) fp[v + 1] = -17 - (fr() * 1.6 + Math.sin(fp[v] * 0.05) * fr() * 2.2 + Math.cos(fp[v + 2] * 0.043) * 1.4);
+    floorGeo.computeVertexNormals(); }
+  scene.add(new T.Mesh(floorGeo, new T.MeshStandardMaterial({ color: 0x0a1626, roughness: 1 })));
+  const grid = new T.GridHelper(300, 40, 0x12324a, 0x0c1e30); grid.position.y = -16.9; scene.add(grid);
+
+  // the 0% waterline
+  const waterline = new T.Mesh(new T.PlaneGeometry(400, 400), new T.MeshBasicMaterial({ color: 0x1b6aa8, transparent: true, opacity: 0.13, side: T.DoubleSide, depthWrite: false }));
+  waterline.rotation.x = -Math.PI / 2; scene.add(waterline);
+  const wlLbl = mkLabel(); wlLbl.innerHTML = `<small style="color:#5fa8d8;letter-spacing:.12em;text-transform:uppercase">0% waterline</small>`;
+  const wlAnchor = new T.Object3D(); wlAnchor.position.set(88, 0, -30); scene.add(wlAnchor);
+
+  // plankton: two slowly counter-rotating drift layers
+  function driftLayer(n, seedN, size, op) {
+    const g = new T.BufferGeometry(), a = new Float32Array(n * 3), rnd = E.mulberry32(seedN);
+    for (let i = 0; i < n; i++) { a[i * 3] = (rnd() - 0.5) * 280; a[i * 3 + 1] = -14 + rnd() * 46; a[i * 3 + 2] = (rnd() - 0.5) * 280; }
+    g.setAttribute("position", new T.BufferAttribute(a, 3));
+    const pts = new T.Points(g, new T.PointsMaterial({ color: 0x9fd8ff, size, transparent: true, opacity: op, blending: T.AdditiveBlending, depthWrite: false }));
+    scene.add(pts); return pts;
+  }
+  const drift1 = driftLayer(700, 21, 0.7, 0.35), drift2 = driftLayer(500, 22, 1.1, 0.22);
+
+  // god rays
+  const rays = [];
+  for (let k = 0; k < 6; k++) {
+    const ray = new T.Mesh(new T.CylinderGeometry(13, 3.5, 52, 12, 1, true),
+      new T.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.045, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+    const rnd = E.mulberry32(31 + k);
+    ray.position.set((rnd() - 0.5) * 180, 28, (rnd() - 0.5) * 180);
+    scene.add(ray); rays.push({ ray, ph: rnd() * 6 });
+  }
+
+  // the dry docks (bench ring) at the surface
+  const DOCK_R = 46, DOCK_Y = 24;
+  const dockRing = new T.Mesh(new T.TorusGeometry(DOCK_R, 0.14, 8, 80), new T.MeshBasicMaterial({ color: 0xff6372, transparent: true, opacity: 0.3 }));
+  dockRing.rotation.x = Math.PI / 2; dockRing.position.y = DOCK_Y; scene.add(dockRing);
+  const dockPad = (i) => { const a = (i / NP) * Math.PI * 2; return new T.Vector3(Math.cos(a) * DOCK_R, DOCK_Y, Math.sin(a) * DOCK_R); };
+  const dockGlows = [];
+  for (let i = 0; i < NP; i++) { const s = glow(0xff6372, 3.5, 0.4); s.position.copy(dockPad(i)); scene.add(s); dockGlows.push(s);
+    const post = new T.Mesh(new T.CylinderGeometry(0.12, 0.12, 6, 6), new T.MeshBasicMaterial({ color: 0xff6372, transparent: true, opacity: 0.5 }));
+    post.position.set(dockPad(i).x, DOCK_Y + 3, dockPad(i).z); scene.add(post); }
+  const dockLbl = mkLabel(); dockLbl.innerHTML = `<small style="color:#ff6372;letter-spacing:.12em;text-transform:uppercase">the dry docks</small>`;
+  const dockAnchor = new T.Object3D(); dockAnchor.position.set(0, DOCK_Y + 4, DOCK_R); scene.add(dockAnchor);
+
+  // submersibles
+  const subs = P.map((p, i) => {
+    const col = new T.Color(FAM_C[p.family]);
+    const grp = new T.Group();
+    const hull = new T.Mesh(new T.SphereGeometry(1, 28, 18), new T.MeshStandardMaterial({ color: col, roughness: 0.4, metalness: 0.25, emissive: col, emissiveIntensity: 0.16 }));
+    hull.scale.set(1.7, 0.95, 1.7); grp.add(hull);
+    const sail = new T.Mesh(new T.BoxGeometry(0.7, 0.55, 1.3), new T.MeshStandardMaterial({ color: 0x1a2436, roughness: 0.6 }));
+    sail.position.y = 0.85; grp.add(sail);
+    const skirt = glow(col, 5, 0.3); skirt.position.y = -0.4; grp.add(skirt);
+    const lamp = glow(0xfff6d8, 2.6, 0.75); lamp.position.set(0, 0, 2.4); grp.add(lamp);
+    // winch line up to the surface + buoy
+    const lineGeo = new T.BufferGeometry(); lineGeo.setAttribute("position", new T.BufferAttribute(new Float32Array(6), 3));
+    const line = new T.Line(lineGeo, new T.LineBasicMaterial({ color: 0x3ddc97, transparent: true, opacity: 0.3 })); scene.add(line);
+    const buoy = glow(0x3ddc97, 3, 0.5); scene.add(buoy);
+    // sonar ring (per manager event), parented so it follows the sub
+    const ring = new T.Mesh(new T.RingGeometry(1, 1.12, 40), new T.MeshBasicMaterial({ color: 0x5fd0ff, transparent: true, opacity: 0, side: T.DoubleSide, blending: T.AdditiveBlending, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = -1.8; grp.add(ring);
+    scene.add(grp);
+    const home = { phase: (i / NP) * Math.PI * 2, r: 18 + (i % 6) * 4.4, spd: 0.05 + (i % 5) * 0.008 };
+    return { grp, hull, skirt, lamp, line, buoy, ring, home, col, y: 6, pos: new T.Vector3(), lbl: mkLabel() };
+  });
+  let rings = [], ringsFor = null;
+  function buildRings(o) {
+    ringsFor = K + "|" + seed; rings = [];
+    o.events.forEach((e) => {
+      if (!["cut", "bench", "promote", "return"].includes(e.type)) return;
+      rings.push({ i: e.i, day: e.day, c: e.type === "promote" || e.type === "return" ? 0x3ddc97 : 0xff6372 });
+    });
+  }
+
+  const seaY = (cum) => Math.max(-15.5, Math.min(30, 7 + 2.4 * cum));
+  let t0 = 0;
+  return {
+    scene, cam: [0, 18, 70], target: [0, 4, 0],
+    enter() { ringsFor = null; },
+    update(dt, d, o) {
+      t0 += dt;
+      const di = Math.min(DAYS, Math.floor(d)), w = o.weights[di], b = o.benched[di];
+      drift1.rotation.y = t0 * 0.01; drift2.rotation.y = -t0 * 0.014; drift1.position.y = Math.sin(t0 * 0.2) * 1.5;
+      rays.forEach(({ ray, ph }) => { ray.rotation.z = Math.sin(t0 * 0.3 + ph) * 0.1; ray.material.opacity = 0.035 + 0.02 * (0.5 + 0.5 * Math.sin(t0 * 0.5 + ph)); });
+      dockGlows.forEach((s, i) => { s.material.opacity = b[i] ? 0.85 : 0.16; s.scale.setScalar(b[i] ? 5 : 3); });
+      subs.forEach((sb, i) => {
+        const home = sb.home, ang = home.phase + t0 * home.spd;
+        const hx = Math.cos(ang) * home.r, hz = Math.sin(ang) * home.r;
+        const pad = dockPad(i);
+        if (b[i]) sb.pos.lerp(new T.Vector3(pad.x, pad.y, pad.z), Math.min(1, dt * 1.4));
+        else sb.pos.lerp(new T.Vector3(hx, seaY(CUM[i][di]), hz), Math.min(1, dt * 1.4));
+        sb.grp.position.copy(sb.pos);
+        sb.grp.rotation.y = ang + Math.PI / 2;
+        const ret = dayRet(i, di);
+        sb.lamp.material.color.set(ret >= 0 ? 0xfff6d8 : 0xffb0b8);
+        // winch line to the surface
+        const lp = sb.line.geometry.attributes.position.array;
+        lp[0] = sb.pos.x; lp[1] = sb.pos.y + 0.9; lp[2] = sb.pos.z;
+        lp[3] = sb.pos.x; lp[4] = 33; lp[5] = sb.pos.z;
+        sb.line.geometry.attributes.position.needsUpdate = true;
+        const strength = Math.min(1, Math.abs(ret) / 0.5);
+        sb.line.material.color.set(ret >= 0 ? 0x3ddc97 : 0xff6372);
+        sb.line.material.opacity = b[i] ? 0.05 : 0.1 + strength * 0.5;
+        sb.buoy.position.set(sb.pos.x, 33, sb.pos.z);
+        sb.buoy.material.color.set(ret >= 0 ? 0x3ddc97 : 0xff6372);
+        sb.buoy.material.opacity = b[i] ? 0.06 : 0.15 + strength * 0.5;
+        sb.skirt.material.opacity = b[i] ? 0.06 : 0.18 + Math.min(0.3, Math.abs(ret) * 0.5);
+        sb.hull.material.emissiveIntensity = b[i] ? 0.02 : 0.16;
+        // sonar ping for the manager's events
+        const ev = rings.find((r) => r.i === i && di >= r.day && di - r.day < 3);
+        if (ev) { const age = di - ev.day; sb.ring.material.color.set(ev.c);
+          sb.ring.scale.setScalar(1 + age * 8 + (t0 % 1) * 4); sb.ring.material.opacity = 0.5 * (1 - age / 3) * (1 - (t0 % 1) * 0.6); }
+        else sb.ring.material.opacity = 0;
+        sb.lbl.className = "lbl" + (b[i] ? " off" : "");
+        sb.lbl.innerHTML = `${esc(P[i].name)}${b[i] ? '<span class="tag">DOCKED</span>' : ""}<small>${w[i].toFixed(2)}% · ${pct(CUM[i][di], 1)}</small>`;
+        place(sb.lbl, sb.grp, 2.4);
+      });
+      place(wlLbl, wlAnchor, 0); place(dockLbl, dockAnchor, 0);
+    },
+    labels: () => [...subs.map((s) => s.lbl), wlLbl, dockLbl],
+    explain: `<span class="eyebrow">World · Deep Sea</span><h2>Trading by depth</h2><p>Each trader pilots a submersible over the abyss. Altitude is the season so far: above the blue waterline is profit, below it is drawdown, and a bad day pulls the sub down while a strong one winches it up. The buoy on the winch line glows green or red with the day's result. A benched trader is hauled up and docked at the red dry-dock ring until its bench ends. Blue sonar rings ping where the selected manager cut, benched or promoted a trader.</p>`,
+    key: [["#1b6aa8", "0% waterline"], ["#3ddc97", "Winch up / promotion"], ["#ff6372", "Winch down / dry docks"], ["#5fd0ff", "Sonar ping"]],
+  };
+})();
+
+/* ================= WEATHER SYSTEMS ================= */
+/* Personas are storm cells over a night landscape. Cell size tracks recent
+   volatility; flashes are the day's result. The manager is the wind: weight
+   pulls a cell toward the calm eye, benched cells drift to the doldrums. */
+W.weather = (() => {
+  const scene = new T.Scene(); scene.fog = new T.Fog(0x060913, 90, 240);
+  scene.add(new T.AmbientLight(0x30405a, 0.6));
+  const moonL = new T.DirectionalLight(0xbcd0ff, 0.55); moonL.position.set(-60, 80, 30); scene.add(moonL);
+  starfield(scene, 900, 300);
+  const moon = glow(0xdfe8ff, 22, 0.5); moon.position.set(-90, 72, -60); scene.add(moon);
+
+  // low-poly night terrain
+  const terGeo = new T.PlaneGeometry(340, 260, 44, 32); terGeo.rotateX(-Math.PI / 2);
+  { const tp = terGeo.attributes.position.array, tr = E.mulberry32(41);
+    for (let v = 0; v < tp.length; v += 3) tp[v + 1] = Math.sin(tp[v] * 0.045) * 2.4 + Math.cos(tp[v + 2] * 0.06 + 1.3) * 2 + tr() * 1.1;
+    terGeo.computeVertexNormals(); }
+  scene.add(new T.Mesh(terGeo, new T.MeshStandardMaterial({ color: 0x0a0f1c, roughness: 1, flatShading: true })));
+  scene.add(new T.Mesh(terGeo, new T.MeshBasicMaterial({ color: 0x223352, wireframe: true, transparent: true, opacity: 0.3 })));
+
+  // the eye (manager) and the doldrums ring
+  const eye = glow(0xdfe8ff, 16, 0.5); eye.position.set(0, 10, 0); scene.add(eye);
+  const eyeCore = glow(0xffffff, 5, 0.9); eyeCore.position.set(0, 9, 0); scene.add(eyeCore);
+  const DOLD = 58;
+  const doldRing = new T.Mesh(new T.TorusGeometry(DOLD, 0.35, 8, 80), new T.MeshBasicMaterial({ color: 0x5d6880, transparent: true, opacity: 0.3 }));
+  doldRing.rotation.x = Math.PI / 2; scene.add(doldRing);
+  const eyeLbl = mkLabel("big"), doldLbl = mkLabel();
+  doldLbl.innerHTML = `<small style="color:var(--faint);letter-spacing:.12em;text-transform:uppercase">the doldrums</small>`;
+  const doldAnchor = new T.Object3D(); doldAnchor.position.set(DOLD, 4, 0); scene.add(doldAnchor);
+
+  // storm cells
+  const cells = P.map((p, i) => {
+    const col = new T.Color(FAM_C[p.family]);
+    const grp = new T.Group();
+    const core = new T.Mesh(new T.SphereGeometry(2.2, 24, 16), new T.MeshStandardMaterial({ color: 0x1b2436, roughness: 0.9, transparent: true, opacity: 0.8 }));
+    grp.add(core);
+    const puffs = [-2, 1.4, 0.4].map((k, j) => { const s = glow(col, 6 + j * 1.6, 0.16); s.position.set(-1.5 + j * 1.6, 0.6 + j * 0.5, (j - 1) * 1.2); grp.add(s); return s; });
+    const flash = glow(0xffffff, 7, 0); grp.add(flash);
+    const under = glow(col, 9, 0.15); under.position.y = -3.4; grp.add(under);
+    scene.add(grp);
+    return { grp, core, puffs, flash, under, col, phase: (i / NP) * Math.PI * 2, spd: 0.02 + (i % 5) * 0.004, flashT: 0, s: 1, r: 40, pos: new T.Vector3(), lbl: mkLabel() };
+  });
+  let bolts = [], boltsFor = null;
+  function buildBolts(o) {
+    boltsFor = K + "|" + seed;
+    bolts.forEach((b) => { scene.remove(b.line); scene.remove(b.head); });
+    bolts = [];
+    // one bolt per strike, zigzag built around a local origin so it can track
+    // its drifting cell; the render pass below shows only the few nearest today
+    o.events.forEach((e) => {
+      const pts = [], rnd = E.mulberry32(e.day * 97 + e.i);
+      let px = 0, pz = 0;
+      for (let y = 28; y > 6; y -= 5) { pts.push(new T.Vector3(px, y, pz)); px = (rnd() - 0.5) * 4; pz = (rnd() - 0.5) * 4; }
+      pts.push(new T.Vector3(0, 4, 0));
+      const line = new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0xfff2b0, transparent: true, opacity: 0.9 }));
+      const head = glow(e.type === "promote" ? 0x3ddc97 : 0xff6372, 4, 0.95);
+      scene.add(line); scene.add(head);
+      bolts.push({ i: e.i, day: e.day, line, head });
+    });
+  }
+
+  let t0 = 0;
+  return {
+    scene, cam: [0, 58, 95], target: [0, 2, 0],
+    enter() { boltsFor = null; },
+    update(dt, d, o) {
+      t0 += dt;
+      const di = Math.min(DAYS, Math.floor(d)), w = o.weights[di], b = o.benched[di];
+      eye.scale.setScalar(14 + 2 * Math.sin(t0 * 1.4)); eyeCore.scale.setScalar(4.4 + 0.7 * Math.sin(t0 * 2.2));
+      cells.forEach((c, i) => {
+        const ang = c.phase + t0 * c.spd * (0.6 + (P[i].activity || 1) * 0.6);
+        const targetR = b[i] ? DOLD : 44 - Math.min(36, w[i]);
+        c.r += (targetR - c.r) * Math.min(1, dt * 1.2);
+        c.pos.set(Math.cos(ang) * c.r, 7 + Math.sin(t0 * 0.5 + i * 1.7) * 1.2, Math.sin(ang) * c.r);
+        c.grp.position.copy(c.pos);
+        const s = 1 + Math.min(2.1, vol7(i, di) * 1.7) + Math.min(36, w[i]) / 18 * 0.5;
+        c.s += (s - c.s) * Math.min(1, dt * 2); c.grp.scale.setScalar(c.s);
+        const ret = dayRet(i, di);
+        if (Math.abs(ret) > 0.22) c.flashT = 1;
+        c.flashT = Math.max(0, c.flashT - dt * 2.2);
+        c.flash.material.color.set(ret >= 0 ? 0x3ddc97 : 0xff6372);
+        c.flash.material.opacity = b[i] ? 0 : Math.max(0.04, c.flashT * 0.85);
+        c.flash.scale.setScalar(6 + (1 - c.flashT) * 4);
+        c.core.material.opacity = b[i] ? 0.3 : 0.8;
+        c.under.material.opacity = b[i] ? 0.04 : 0.13 + Math.min(0.2, Math.abs(ret) * 0.3);
+        c.lbl.className = "lbl" + (b[i] ? " off" : "");
+        c.lbl.innerHTML = `${esc(P[i].name)}${b[i] ? '<span class="tag">FOGBOUND</span>' : ""}<small>${w[i].toFixed(2)}% · ${pct(CUM[i][di], 1)}</small>`;
+        place(c.lbl, c.grp, 3.2);
+      });
+      if (boltsFor !== K + "|" + seed) buildBolts(o); // after positions are current
+      // show at most 6 strikes at once — the ones nearest today — and fade by age
+      bolts.forEach((bl) => { bl.line.visible = false; bl.head.visible = false; });
+      bolts
+        .map((bl) => ({ bl, age: d - bl.day })) // fractional age: fades during playback, holds when paused on the day
+        .filter(({ age }) => age >= 0 && age < 2.5)
+        .sort((a, b) => a.age - b.age)
+        .slice(0, 6)
+        .forEach(({ bl, age }) => {
+          const f = 1 - age / 2.5;
+          bl.line.visible = true; bl.head.visible = true;
+          bl.line.material.opacity = 0.25 + f * 0.65; bl.head.material.opacity = f;
+          const p = cells[bl.i].pos; // track the drifting cell
+          bl.line.position.set(p.x, 0, p.z);
+          bl.head.position.set(p.x, p.y - 1, p.z);
+        });
+      eyeLbl.innerHTML = `<span style="color:${pmColor(K)}">${esc(M[K].name)}</span><small>the eye · ${pct(pmRet(K, di), 1)} · cash ${(100 - w.reduce((a, x) => a + x, 0)).toFixed(1)}%</small>`;
+      place(eyeLbl, eyeCore, 2); place(doldLbl, doldAnchor, 0);
+    },
+    labels: () => [...cells.map((c) => c.lbl), eyeLbl, doldLbl],
+    explain: `<span class="eyebrow">World · Weather Systems</span><h2>The desk as storms</h2><p>Each trader is a storm cell drifting over the night map. Cells swell with recent volatility and flash green or red with the day's result. The manager is the wind: the more capital a trader is given, the closer its cell circles the calm eye at the centre. A benched trader drifts out to the grey doldrums and fades into fog. Lightning bolts strike where the manager cut, benched or promoted someone.</p>`,
+    key: [["#dfe8ff", "The eye = manager"], ["#3ddc97", "Up flash / promotion"], ["#ff6372", "Down flash / strike"], ["#5d6880", "Doldrums (bench)"]],
+  };
+})();
+
+/* ================= NIGHT REEF ================= */
+/* Personas are schools of reef fish. School spread and speed track allocation
+   and the day's return; benched schools rest dimmed in the red rest cove.
+   The manager is a turtle shadow gliding over the schools it favours. */
+W.reef = (() => {
+  const scene = new T.Scene(); scene.fog = new T.Fog(0x050f18, 80, 220);
+  scene.add(new T.AmbientLight(0x2a5a66, 0.85));
+  const sun = new T.DirectionalLight(0xbfe8d8, 0.6); sun.position.set(20, 70, 10); scene.add(sun);
+  starfield(scene, 600, 280);
+
+  // sand + moving caustics
+  const sand = new T.Mesh(new T.PlaneGeometry(320, 240), new T.MeshStandardMaterial({ color: 0x101c26, roughness: 1 }));
+  sand.rotation.x = -Math.PI / 2; scene.add(sand);
+  function causticsTex() {
+    const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d"), rnd = E.mulberry32(61);
+    g.clearRect(0, 0, 256, 256);
+    for (let k = 0; k < 90; k++) { g.strokeStyle = `rgba(180,235,255,${0.08 + rnd() * 0.14})`; g.lineWidth = 1 + rnd() * 1.6;
+      g.beginPath(); const x = rnd() * 256, y = rnd() * 256, r = 6 + rnd() * 16, a0 = rnd() * 6.3;
+      g.arc(x, y, r, a0, a0 + 1.2 + rnd() * 2); g.stroke(); }
+    const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(5, 4); return t;
+  }
+  const CAUS = causticsTex();
+  const caustics = new T.Mesh(new T.PlaneGeometry(320, 240), new T.MeshBasicMaterial({ map: CAUS, transparent: true, opacity: 0.16, blending: T.AdditiveBlending, depthWrite: false }));
+  caustics.rotation.x = -Math.PI / 2; caustics.position.y = 0.06; scene.add(caustics);
+
+  // coral districts by family
+  const fams = [...new Set(P.map((p) => p.family))];
+  const famLbls = [];
+  const SP = 14, maxRow = Math.max(...fams.map((f) => P.filter((p) => p.family === f).length));
+  const homeOf = (i) => { const f = P[i].family, row = fams.indexOf(f), members = P.map((p, j) => j).filter((j) => P[j].family === f), col = members.indexOf(i);
+    return { x: (col - (members.length - 1) / 2) * SP, z: (row - (fams.length - 1) / 2) * SP * 1.15 }; };
+  fams.forEach((f, row) => {
+    const z = (row - (fams.length - 1) / 2) * SP * 1.15;
+    const fl = mkLabel(); fl.innerHTML = `<small style="color:${FAM_C[f]};letter-spacing:.12em;text-transform:uppercase">${FAM_N[f]}</small>`;
+    const fa = new T.Object3D(); fa.position.set(-((maxRow - 1) / 2) * SP - 9, 0.5, z); scene.add(fa);
+    famLbls.push([fl, fa]);
+    const cr = E.mulberry32(71 + row);
+    for (let k = 0; k < 5; k++) {
+      const cx = -((maxRow - 1) / 2) * SP - 6 + (cr() - 0.5) * 6, cz = z + (cr() - 0.5) * SP;
+      const col = new T.Color(FAM_C[f]);
+      const trunk = new T.Mesh(new T.ConeGeometry(0.8 + cr() * 0.8, 2.5 + cr() * 2.5, 7), new T.MeshStandardMaterial({ color: 0x18242e, roughness: 0.8, emissive: col, emissiveIntensity: 0.18 }));
+      trunk.position.set(cx, 1.2, cz); scene.add(trunk);
+      const tip = glow(FAM_C[f], 2.5, 0.3); tip.position.set(cx, 2.8, cz); scene.add(tip);
+    }
+  });
+
+  // the rest cove (bench ring)
+  const COVE_R = 42;
+  const coveLbl = mkLabel(); coveLbl.innerHTML = `<small style="color:#ff6372;letter-spacing:.12em;text-transform:uppercase">the rest cove</small>`;
+  const coveAnchor = new T.Object3D(); coveAnchor.position.set(COVE_R, 2, 0); scene.add(coveAnchor);
+  const anemoneAt = (i) => { const a = (i / NP) * Math.PI * 2; return new T.Vector3(Math.cos(a) * COVE_R, 1.4, Math.sin(a) * COVE_R); };
+  const anemones = P.map((p, i) => {
+    const g = new T.Group(); const pos = anemoneAt(i);
+    const bulb = new T.Mesh(new T.SphereGeometry(1.1, 16, 12), new T.MeshStandardMaterial({ color: 0x2a1420, roughness: 0.7, emissive: 0xff6372, emissiveIntensity: 0.3 }));
+    g.add(bulb);
+    const rnd = E.mulberry32(81 + i);
+    for (let k = 0; k < 9; k++) { const sp = new T.Mesh(new T.ConeGeometry(0.16, 1.3, 5), new T.MeshStandardMaterial({ color: 0x3a1a26, emissive: 0xff6372, emissiveIntensity: 0.35 }));
+      const a = rnd() * Math.PI * 2, t2 = rnd() * Math.PI - Math.PI / 2;
+      sp.position.set(Math.cos(a) * Math.cos(t2) * 0.9, Math.sin(t2) * 0.9, Math.sin(a) * Math.cos(t2) * 0.9);
+      sp.rotation.set(Math.PI / 2 - t2, 0, -a); g.add(sp); }
+    const gl = glow(0xff6372, 5, 0.25); g.add(gl);
+    g.position.copy(pos); scene.add(g);
+    return g;
+  });
+
+  // fish schools
+  const FISHN = 22;
+  const fishGeo = new T.ConeGeometry(0.32, 1.05, 5); fishGeo.rotateX(Math.PI / 2); // cone nose points +z
+  const schools = P.map((p, i) => {
+    const mesh = new T.InstancedMesh(fishGeo, new T.MeshStandardMaterial({ roughness: 0.5 }), FISHN);
+    mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+    mesh.instanceColor = new T.InstancedBufferAttribute(new Float32Array(FISHN * 3), 3);
+    mesh.count = FISHN; scene.add(mesh);
+    const rnd = E.mulberry32(91 + i);
+    const fish = Array.from({ length: FISHN }, () => ({ ph: rnd() * Math.PI * 2, r: 2.2 + rnd() * 3.6, y: rnd() * 3 + 1.5, wob: rnd() * 6 }));
+    const anchor = new T.Object3D(); anchor.position.set(homeOf(i).x, 5.5, homeOf(i).z); scene.add(anchor);
+    return { i, mesh, anchor, fish, home: homeOf(i), dart: 0, key: "", lbl: mkLabel() };
+  });
+  const mtx = new T.Matrix4(), q = new T.Quaternion(), eul = new T.Euler(), sc = new T.Vector3(), pv = new T.Vector3();
+  const cFam = new T.Color(), cGrey = new T.Color(0.4, 0.42, 0.46), cTint = new T.Color();
+
+  // the manager turtle + its shadow
+  const turtle = new T.Group();
+  const shell = new T.Mesh(new T.SphereGeometry(1, 24, 16), new T.MeshStandardMaterial({ color: 0x14303c, roughness: 0.6 }));
+  shell.scale.set(2.3, 0.6, 3); turtle.add(shell);
+  const shellTop = new T.Mesh(new T.SphereGeometry(1, 20, 12), new T.MeshStandardMaterial({ color: 0x1d4552, roughness: 0.5 }));
+  shellTop.scale.set(1.8, 0.45, 2.4); shellTop.position.y = 0.25; turtle.add(shellTop);
+  const head = new T.Mesh(new T.SphereGeometry(0.55, 14, 10), new T.MeshStandardMaterial({ color: 0x0c2833, roughness: 0.6 }));
+  head.position.set(0, 0.15, 3.1); turtle.add(head);
+  [[-2.1, 0.2, 1.2], [2.1, 0.2, 1.2], [-1.8, 0.15, -1.4], [1.8, 0.15, -1.4]].forEach(([fx, fy, fz]) => {
+    const fin = new T.Mesh(new T.BoxGeometry(1.5, 0.16, 0.8), new T.MeshStandardMaterial({ color: 0x0c2833, roughness: 0.6 }));
+    fin.position.set(fx, fy, fz); fin.rotation.y = fx > 0 ? -0.5 : 0.5; turtle.add(fin); });
+  const shellGlow = glow(0xdfe8ff, 11, 0.34); shellGlow.position.y = 1.4; turtle.add(shellGlow);
+  scene.add(turtle);
+  const shadow = new T.Mesh(new T.CircleGeometry(3.2, 24), new T.MeshBasicMaterial({ color: 0x000814, transparent: true, opacity: 0.35, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.12; scene.add(shadow);
+
+  // bubbles
+  const bubbleCols = [];
+  for (let k = 0; k < 3; k++) {
+    const n = 30, g = new T.BufferGeometry(), a = new Float32Array(n * 3), rnd = E.mulberry32(101 + k);
+    const bx = (rnd() - 0.5) * 60, bz = (rnd() - 0.5) * 40;
+    for (let j = 0; j < n; j++) { a[j * 3] = bx + (rnd() - 0.5) * 1.5; a[j * 3 + 1] = rnd() * 18; a[j * 3 + 2] = bz + (rnd() - 0.5) * 1.5; }
+    g.setAttribute("position", new T.BufferAttribute(a, 3));
+    const pts = new T.Points(g, new T.PointsMaterial({ color: 0xbfe8ff, size: 0.5, transparent: true, opacity: 0.4, blending: T.AdditiveBlending, depthWrite: false }));
+    scene.add(pts); bubbleCols.push({ pts, g, spd: 1.4 + k * 0.5 });
+  }
+
+  let t0 = 0;
+  return {
+    scene, cam: [30, 20, 56], target: [0, 5, 0],
+    enter() { schools.forEach((s) => (s.key = "")); },
+    update(dt, d, o) {
+      t0 += dt;
+      const di = Math.min(DAYS, Math.floor(d)), w = o.weights[di], b = o.benched[di];
+      CAUS.offset.x = t0 * 0.015; CAUS.offset.y = Math.sin(t0 * 0.1) * 0.06;
+      bubbleCols.forEach((bc) => { const a = bc.g.attributes.position.array;
+        for (let j = 1; j < a.length; j += 3) { a[j] += bc.spd * dt; if (a[j] > 18) a[j] = 0; }
+        bc.g.attributes.position.needsUpdate = true; });
+      const top = leaders(di);
+      schools.forEach((s) => {
+        const i = s.i, h = s.home, benched = b[i];
+        const ret = dayRet(i, di);
+        if (Math.abs(ret) > 0.2) s.dart = 1;
+        s.dart = Math.max(0, s.dart - dt * 1.1);
+        const speed = benched ? 0.12 : 0.35 + Math.abs(ret) * 1.3 + s.dart * 1.6;
+        const spread = benched ? 0.9 : 2.2 + Math.min(36, w[i]) * 0.14;
+        s.mesh.position.set(h.x, 0, h.z);
+        const key = (benched ? 1 : 0) + "|" + di;
+        if (key !== s.key) { s.key = key; cFam.set(FAM_C[P[i].family]);
+          for (let k = 0; k < FISHN; k++) { cTint.copy(benched ? cGrey : cFam); s.mesh.setColorAt(k, cTint); }
+          s.mesh.instanceColor.needsUpdate = true; }
+        for (let k = 0; k < FISHN; k++) {
+          const f = s.fish[k];
+          if (benched) { const a2 = anemoneAt(i);
+            pv.set(a2.x + Math.sin(f.ph + t0 * 0.3) * 0.9, 1.8 + f.y * 0.22, a2.z + Math.cos(f.ph + t0 * 0.3) * 0.9);
+            eul.set(0, f.ph + t0 * 0.2, 0);
+          } else {
+            const a2 = f.ph + t0 * speed * (0.6 + f.r * 0.05);
+            pv.set(Math.cos(a2) * f.r * (0.6 + spread * 0.22), f.y + Math.sin(t0 * 0.8 + f.wob) * 0.5, Math.sin(a2) * f.r * (0.6 + spread * 0.22));
+            eul.set(0, -a2, 0); // face travel direction around the ring
+          }
+          q.setFromEuler(eul); const fs = benched ? 0.75 : 0.85 + Math.min(36, w[i]) * 0.012;
+          sc.set(fs, fs, fs * (1 + s.dart * 0.6)); mtx.compose(pv, q, sc); s.mesh.setMatrixAt(k, mtx);
+        }
+        s.mesh.instanceMatrix.needsUpdate = true;
+        s.lbl.style.visibility = top.has(i) || benched || CUM[i][di] < 0 ? "" : "hidden";
+        s.lbl.className = "lbl" + (benched ? " off" : "");
+        s.lbl.innerHTML = `${esc(P[i].name)}${benched ? '<span class="tag">RESTING</span>' : ""}<small>${pct(CUM[i][di], 1)} · ${w[i].toFixed(1)}%</small>`;
+        place(s.lbl, s.anchor, 0);
+      });
+      // turtle glides above the school with the largest current weight
+      let fav = 0; for (let i = 1; i < NP; i++) if (!b[i] && w[i] > w[fav]) fav = i;
+      const fh = schools[fav].home, ta = t0 * 0.25;
+      const tpos = new T.Vector3(fh.x + Math.cos(ta) * 6, 13 + Math.sin(t0 * 0.5) * 1.2, fh.z + Math.sin(ta) * 6);
+      turtle.position.lerp(tpos, Math.min(1, dt * 0.5));
+      turtle.rotation.y = -ta + Math.PI / 2;
+      shellGlow.material.color.set(pmColor(K)); shellGlow.material.opacity = 0.24 + Math.min(0.18, w[fav] * 0.012);
+      shadow.position.set(turtle.position.x, 0.12, turtle.position.z);
+      const shScale = 1 + (13 - Math.min(13, turtle.position.y)) * 0.1; shadow.scale.setScalar(shScale);
+      famLbls.forEach(([l, a]) => place(l, a, 0, "-100%", "-50%"));
+      place(coveLbl, coveAnchor, 0);
+    },
+    labels: () => [...schools.map((s) => s.lbl), coveLbl, ...famLbls.map(([l]) => l)],
+    explain: `<span class="eyebrow">World · Night Reef</span><h2>A season on the reef</h2><p>Each trader is a school of reef fish circling its family's patch of coral. The wider the school spreads, the more capital the manager has given it, and it darts on strong days. A benched school rests dimmed among the red anemones of the rest cove. The turtle is the manager: it glides above whichever school currently holds the most of the book, its shell lit in the manager's colour. Faint caustics and rising bubbles keep the water alive.</p>`,
+    key: [["#e9eef7", "School spread = weight"], ["#3ddc97", "Dart on up days"], ["#ff6372", "Rest cove (bench)"], ["#dfe8ff", "Turtle = manager"]],
+  };
+})();
+
+// pmRet needs to exist before W.weather's update runs; hoisted function declaration
+function pmRet(k, di) { if (!di) return 0; const v = SIM.pms[k].values[di - 1]; return ((v - M[k].starting_capital) / M[k].starting_capital) * 100; }
+
+/* ---------------- HUD ---------------- */
+$("pmList").innerHTML = M.map((m, k) => `<button class="pm-row" type="button" data-k="${k}" aria-pressed="${k === K}" style="--c:${pmColor(k)}"><i></i><span><b>${esc(m.name)}</b><small>${esc(m.rules.style.replace("_", " "))}</small></span><span class="v" data-v></span></button>`).join("");
+let lastFeed = -1;
+$("pmList").onclick = (e) => { const b = e.target.closest("[data-k]"); if (!b) return; K = +b.dataset.k;
+  $("pmList").querySelectorAll(".pm-row").forEach((r) => r.setAttribute("aria-pressed", r === b)); W[world].enter(); lastFeed = -1; };
+function renderExplain() { const w = W[world]; $("explain").innerHTML = w.explain + `<div class="key">${w.key.map(([c, t]) => `<span style="--k:${c}">${t}</span>`).join("")}</div>`; }
+function renderFeed(di) {
+  if (di === lastFeed) return; lastFeed = di;
+  const ev = SIM.pms[K].events.filter((e) => e.day <= di).slice(-7).reverse();
+  $("feed").innerHTML = ev.length ? ev.map((e) => `<li class="${e.type}"><span class="d">d${e.day}</span><span class="t">${esc(e.text)}</span></li>`).join("")
+    : `<li><span class="d"></span><span class="t" style="color:var(--muted)">No risk actions yet.</span></li>`;
+}
+const PLAY_SVG = `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>`, PAUSE_SVG = `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 2.5h3v11H4zM9 2.5h3v11H9z" fill="currentColor"/></svg>`;
+function setPlay(p) { playing = p; $("play").innerHTML = p ? PAUSE_SVG : PLAY_SVG; $("play").setAttribute("aria-label", p ? "Pause" : "Play season"); }
+setPlay(true);
+$("play").onclick = () => { if (!playing && day >= DAYS) day = 0; setPlay(!playing); };
+$("speed").onclick = (e) => { const b = e.target.closest("[data-s]"); if (!b) return; speed = +b.dataset.s; $("speed").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); };
+$("scrub").oninput = (e) => { day = +e.target.value; setPlay(false); };
+$("reroll").onclick = () => { seed = 1000 + Math.floor(Math.random() * 90000); simulate(); $("seedlbl").textContent = "#" + seed; day = 0; lastFeed = -1; W[world].enter(); setPlay(true); };
+$("seedlbl").textContent = "#" + seed;
+
+function setWorld(w) {
+  world = w;
+  document.querySelectorAll(".worlds button").forEach((b) => b.setAttribute("aria-selected", b.dataset.w === w));
+  Object.keys(W).forEach((k) => W[k].labels().forEach((l) => (l.style.display = k === w ? "" : "none")));
+  const c = W[w], zf = host.clientWidth / host.clientHeight < 1 ? 1.9 : 1; camera.position.set(...c.cam.map((v) => v * zf)); controls.target.set(...c.target); controls.autoRotate = true; c.enter();
+  renderExplain();
+  try { localStorage.setItem("blue.view", w); } catch (e) {}
+}
+document.querySelector(".worlds").onclick = (e) => { const b = e.target.closest("[data-w]"); if (b) setWorld(b.dataset.w); };
+let start = "sea"; try { start = localStorage.getItem("blue.view") || "sea"; } catch (e) {}
+// preview hooks live in the hash (#pdb=reef&pdbd=70) so a host's own query params can't collide
+const q = new URLSearchParams(location.hash.slice(1));
+if (W[q.get("pdb")]) start = q.get("pdb");
+const qd = Number(q.get("pdbd"));
+if (q.has("pdbd") && Number.isFinite(qd)) { day = Math.max(0, Math.min(DAYS, qd)); setPlay(false); }
+function resize() { const w = host.clientWidth, h = host.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener("resize", resize); resize();
+setWorld(W[start] ? start : "sea");
+
+let last = performance.now();
+function frame(now) {
+  // rAF's first timestamp can predate performance.now() taken at load, so clamp dt to [0, 0.1]
+  const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = now;
+  if (!Number.isFinite(day) || day < 0) day = 0;
+  if (playing) { day = Math.min(DAYS, day + dt * 3 * speed); if (day >= DAYS) setPlay(false); }
+  const di = Math.floor(day);
+  $("scrub").value = di; $("dayno").textContent = di;
+  $("scrubinfo").textContent = di ? `${M[K].name} ${pct(pmRet(K, di))}` : "start of season";
+  $("pmList").querySelectorAll("[data-v]").forEach((el, k) => { const r = pmRet(k, di); el.textContent = pct(r); el.className = "v " + (r >= 0 ? "gain" : "loss"); });
+  renderFeed(di);
+  controls.update();
+  W[world].update(dt, day, SIM.pms[K]);
+  renderer.render(W[world].scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
